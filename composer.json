@@ -1,0 +1,6 @@
+{
+    "name": "makehaven/profile_redirect",
+    "type": "drupal-custom-module",
+    "description": "Redirects users to /video after saving a profile of type main.",
+    "license": "GPL-2.0-or-later"
+}

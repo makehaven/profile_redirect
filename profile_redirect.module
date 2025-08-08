@@ -1,0 +1,60 @@
+<?php
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
+use Drupal\Core\Routing\TrustedRedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
+
+/**
+ * Implements hook_entity_insert() to handle redirect after profile creation.
+ */
+function profile_redirect_entity_insert(EntityInterface $entity) {
+  // Check if the entity is a profile and redirect if applicable.
+  if ($entity->getEntityTypeId() == 'profile') {
+    _profile_redirect_send_to_nextpage();
+  }
+}
+
+/**
+ * Implements hook_entity_update() to handle redirect after profile update.
+ */
+function profile_redirect_entity_update(EntityInterface $entity) {
+  // Check if the entity is a profile and redirect if applicable.
+  if ($entity->getEntityTypeId() == 'profile') {
+    _profile_redirect_send_to_nextpage();
+  }
+}
+
+/**
+ * Helper function to redirect to the specified 'nextpage' if present.
+ */
+function _profile_redirect_send_to_nextpage() {
+  // Get the current request to access query parameters.
+  $request = \Drupal::request();
+  $nextpage = $request->query->get('nextpage');
+
+  // If 'nextpage' parameter is present, process the redirection.
+  if ($nextpage) {
+    // Check if the 'nextpage' value is a full URL or just a path.
+    if (parse_url($nextpage, PHP_URL_SCHEME) === null) {
+      // If no scheme is present, assume it's a relative path.
+      $redirect_url = Url::fromUri('internal:/' . ltrim($nextpage, '/'))->toString();
+    } else {
+      $redirect_url = $nextpage;
+    }
+
+    // Redirect to the calculated nextpage URL.
+    $response = new TrustedRedirectResponse($redirect_url);
+    $response->send();
+
+    // Display a message to notify the user of the redirection.
+    \Drupal::messenger()->addStatus(t('Profile saved successfully. Redirecting to the next page...'));
+
+    // Stop further execution to enforce the redirect.
+    \Drupal::service('page_cache_kill_switch')->trigger();
+    exit();
+  }
+
+  // If no 'nextpage' parameter is present, do nothing.
+  \Drupal::messenger()->addStatus(t('Profile saved successfully, but no further redirection was needed.'));
+}
