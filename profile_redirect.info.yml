@@ -2,6 +2,6 @@ name: 'Profile Redirect'
 type: module
 description: 'Redirects users to /video after saving a profile of type main.'
 core_version_requirement: ^9 || ^10 || ^11
-package: Custom
+package: Makerspace
 dependencies:
   - profile:profile
