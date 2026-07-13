@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 function profile_redirect_entity_insert(EntityInterface $entity) {
   // Check if the entity is a profile and redirect if applicable.
   if ($entity->getEntityTypeId() == 'profile') {
-    _profile_redirect_send_to_nextpage();
+    _profile_redirect_send_to_nextpage($entity);
   }
 }
 
@@ -21,17 +21,31 @@ function profile_redirect_entity_insert(EntityInterface $entity) {
 function profile_redirect_entity_update(EntityInterface $entity) {
   // Check if the entity is a profile and redirect if applicable.
   if ($entity->getEntityTypeId() == 'profile') {
-    _profile_redirect_send_to_nextpage();
+    _profile_redirect_send_to_nextpage($entity);
   }
 }
 
 /**
  * Helper function to redirect to the specified 'nextpage' if present.
  */
-function _profile_redirect_send_to_nextpage() {
+function _profile_redirect_send_to_nextpage(EntityInterface $profile = NULL) {
   // Get the current request to access query parameters.
   $request = \Drupal::request();
   $nextpage = $request->query->get('nextpage');
+
+  // Onboarding fallback: the join flow passes ?nextpage=video, but the
+  // parameter is lost when the member re-enters the profile form by another
+  // path (validation-error round trips, the onboarding timeline's Resume
+  // link before 2026-07-13, a bookmarked URL). A still-onboarding member
+  // saving their own main profile should always advance to the orientation
+  // video rather than dead-ending on the profile page.
+  if (!$nextpage && $profile && $profile->bundle() === 'main') {
+    $account = \Drupal::currentUser();
+    $owner_id = method_exists($profile, 'getOwnerId') ? (int) $profile->getOwnerId() : 0;
+    if ($owner_id === (int) $account->id() && in_array('member_pending_approval', $account->getRoles(), TRUE)) {
+      $nextpage = 'video';
+    }
+  }
 
   // If 'nextpage' parameter is present, process the redirection.
   if ($nextpage) {
@@ -55,6 +69,6 @@ function _profile_redirect_send_to_nextpage() {
     exit();
   }
 
-  // If no 'nextpage' parameter is present, do nothing.
-  \Drupal::messenger()->addStatus(t('Profile saved successfully, but no further redirection was needed.'));
+  // No nextpage and not an onboarding save: the normal form flow handles
+  // its own confirmation message, so stay quiet here.
 }
