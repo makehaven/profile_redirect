@@ -39,11 +39,24 @@ function _profile_redirect_send_to_nextpage(EntityInterface $profile = NULL) {
   // link before 2026-07-13, a bookmarked URL). A still-onboarding member
   // saving their own main profile should always advance to the orientation
   // video rather than dead-ending on the profile page.
+  //
+  // The fallback must only fire on the profile form pages themselves: this
+  // hook runs on EVERY save of a main profile, including programmatic saves
+  // by other forms — the thank-you page interest picker saves the profile,
+  // and without the route guard the member was yanked back to /video mid
+  // getting-started (staff report 2026-07-24).
   if (!$nextpage && $profile && $profile->bundle() === 'main') {
-    $account = \Drupal::currentUser();
-    $owner_id = method_exists($profile, 'getOwnerId') ? (int) $profile->getOwnerId() : 0;
-    if ($owner_id === (int) $account->id() && in_array('member_pending_approval', $account->getRoles(), TRUE)) {
-      $nextpage = 'video';
+    $profile_form_routes = [
+      'profile.user_page.single',
+      'profile.user_page.add_form',
+      'entity.profile.edit_form',
+    ];
+    if (in_array(\Drupal::routeMatch()->getRouteName(), $profile_form_routes, TRUE)) {
+      $account = \Drupal::currentUser();
+      $owner_id = method_exists($profile, 'getOwnerId') ? (int) $profile->getOwnerId() : 0;
+      if ($owner_id === (int) $account->id() && in_array('member_pending_approval', $account->getRoles(), TRUE)) {
+        $nextpage = 'video';
+      }
     }
   }
 
