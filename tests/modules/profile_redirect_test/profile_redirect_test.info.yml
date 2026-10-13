@@ -1,0 +1,7 @@
+name: 'Profile Redirect test'
+type: module
+description: 'Saves a profile from a non-form route, as background code does.'
+package: Testing
+core_version_requirement: ^10 || ^11
+dependencies:
+  - profile_redirect:profile_redirect

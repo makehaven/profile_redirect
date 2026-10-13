@@ -33,6 +33,23 @@ function _profile_redirect_send_to_nextpage(EntityInterface $profile = NULL) {
   $request = \Drupal::request();
   $nextpage = $request->query->get('nextpage');
 
+  // Only the forms a person fills in may redirect. This hook also runs when
+  // code saves a profile in the background, and an explicit ?nextpage on
+  // that request is not addressed to it: the returning-member payment step
+  // (/membership-initiate) carries Chargebee's ?nextpage=video and saves the
+  // profile to clear the old end date, and the exit() below then abandoned
+  // the request before the payment was linked or the member role granted
+  // (uid 576, 2026-10-13).
+  $form_routes = [
+    'user.register',
+    'profile.user_page.single',
+    'profile.user_page.add_form',
+    'entity.profile.edit_form',
+  ];
+  if (!in_array(\Drupal::routeMatch()->getRouteName(), $form_routes, TRUE)) {
+    return;
+  }
+
   // Onboarding fallback: the join flow passes ?nextpage=video, but the
   // parameter is lost when the member re-enters the profile form by another
   // path (validation-error round trips, the onboarding timeline's Resume
@@ -46,12 +63,7 @@ function _profile_redirect_send_to_nextpage(EntityInterface $profile = NULL) {
   // and without the route guard the member was yanked back to /video mid
   // getting-started (staff report 2026-07-24).
   if (!$nextpage && $profile && $profile->bundle() === 'main') {
-    $profile_form_routes = [
-      'profile.user_page.single',
-      'profile.user_page.add_form',
-      'entity.profile.edit_form',
-    ];
-    if (in_array(\Drupal::routeMatch()->getRouteName(), $profile_form_routes, TRUE)) {
+    if (\Drupal::routeMatch()->getRouteName() !== 'user.register') {
       $account = \Drupal::currentUser();
       $owner_id = method_exists($profile, 'getOwnerId') ? (int) $profile->getOwnerId() : 0;
       if ($owner_id === (int) $account->id() && in_array('member_pending_approval', $account->getRoles(), TRUE)) {

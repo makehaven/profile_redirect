@@ -1,0 +1,10 @@
+profile_redirect_test.background_save:
+  path: '/profile-redirect-test/background-save/{user}'
+  defaults:
+    _controller: '\Drupal\profile_redirect_test\Controller\BackgroundSaveController::save'
+  requirements:
+    _access: 'TRUE'
+  options:
+    parameters:
+      user:
+        type: entity:user
